@@ -90,13 +90,15 @@ class LFRM:
 
                 # compute the log likelihood when Znk=0
                 self.matrix_z[object_index, feature_index] = 0
-                prob_z0 = self.log_likelihood_y(self.matrix_y[[object_index], :], self.matrix_z[[object_index], :], self.matrix_w)
+                prob_z0 = self.log_likelihood_y(self.matrix_y[[object_index], :], self.matrix_z[[object_index], :],
+                                                self.matrix_w)
                 prob_z0 += log_prob_z0[feature_index]
                 prob_z0 = numpy.exp(prob_z0)
 
                 # compute the log likelihood when Znk=1
                 self.matrix_z[object_index, feature_index] = 1
-                prob_z1 = self.log_likelihood_y(self.matrix_y[[object_index], :], self.matrix_z[[object_index], :], self.matrix_w)
+                prob_z1 = self.log_likelihood_y(self.matrix_y[[object_index], :], self.matrix_z[[object_index], :],
+                                                self.matrix_w)
                 prob_z1 += log_prob_z1[feature_index]
                 prob_z1 = numpy.exp(prob_z1)
 
