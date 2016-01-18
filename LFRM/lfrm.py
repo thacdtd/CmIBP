@@ -17,11 +17,13 @@ class LFRM:
         self.matrix_w = numpy.zeros((0, 0))
         self.matrix_z = numpy.zeros((0, 0))
         self.dim_n = 1
-        self.dim_k = 0
+        self.dim_k = 1
         self.metropolis_hastings_k_new = False
 
     def initialize_data(self, data):
         self.matrix_y = data
+        # print "shape 0"
+        # print self.matrix_y.shape[0]
         self.dim_n = self.matrix_y.shape[0]
 
     """
@@ -49,8 +51,8 @@ class LFRM:
         return self.matrix_z
 
     def log_likelihood_y(self, matrix_y=None, matrix_z=None, matrix_w=None):
-        if matrix_y is None:
-            matrix_y = self.matrix_y
+        # if matrix_y is None:
+            # matrix_y = self.matrix_y
         if matrix_z is None:
             matrix_z = self.matrix_z
         if matrix_w is None:
@@ -112,7 +114,7 @@ class LFRM:
     """
     sample K_new using metropolis hastings algorithm
     """
-    def metropolis_hastings_k_new(self, object_index, singleton_features):
+    def sample_metropolis_hastings_k_new(self, object_index, singleton_features):
         if type(object_index) != list:
             object_index = [object_index]
 
@@ -178,7 +180,8 @@ class LFRM:
 
             if self.metropolis_hastings_k_new:
                 # sample K_new using metropolis hasting
-                self.metropolis_hastings_k_new(object_index, singleton_features)
+                b = self.sample_metropolis_hastings_k_new(object_index, singleton_features)
+                # print b
 
     def sample_matrix_w(self):
         # construct the W_old
@@ -244,9 +247,9 @@ class LFRM:
             self.sample_matrix_z()
             self.regularize_matrices()
             self.sample_matrix_w()
-            print iter, self.dim_k
+            # print iter, self.dim_k
             print("alpha: %f\tsigma_w: %f\tmean_w: %f" % (self.alpha, self.sigma_w, self.mean_w));
-            print self.matrix_w
+            # print self.matrix_w
 
     def load_data(self, file_location):
         import scipy.io
@@ -263,28 +266,28 @@ class LFRM:
 
     def run(self):
         print "lfrm"
-        # datas, data_num, t_time = self.load_data('../data/enrondata.mat')
+        datas, data_num, t_time = self.load_data('../data/enrondata.mat')
         # data = numpy.array([[0,0,1,0,1,0,0,1,0],[0,0,0,0,0,0,1,0,1],[0,0,1,0,0,0,1,0,1],[0,1,1,0,0,0,0,1,0],
         #                    [0,0,0,0,0,0,1,0,1],[0,1,1,0,1,0,0,1,0],[1,0,0,0,0,1,0,0,0],[0,0,0,0,0,1,1,0,1],[1,0,0,1,0,1,0,0,0]])
 
-        data = numpy.array([[1, 0, 1], [0, 0, 1], [1, 1, 0]])
-        # self.initialize_data(datas[:, :, 0])
-        self.initialize_data(data)
+        # data = numpy.array([[1, 0, 1], [0, 0, 1], [1, 1, 0]])
+        self.initialize_data(datas[:, :, 0])
+        #self.initialize_data(data)
 
         matrix_z = self.initialize_matrix_z()
         self.sample(100)
         import matplotlib.pyplot as P
         from util.scaled_image import scaledimage
 
-        scaledimage(self.matrix_y)
-        scaledimage(self.matrix_z)
-        scaledimage(self.matrix_w)
-        scaledimage(self.log_likelihood_y(self.matrix_y, self.matrix_z, self.matrix_w))
-        P.show()
+        # scaledimage(self.matrix_y)
+        # scaledimage(self.matrix_z)
+        # scaledimage(self.matrix_w)
+        # scaledimage(self.log_likelihood_y(self.matrix_y, self.matrix_z, self.matrix_w))
+        # P.show()
 
-        print (self.dim_n, self.dim_n)
+        # print (self.dim_n, self.dim_n)
         print matrix_z.shape
-        print matrix_z
+        # print matrix_z
 
 if __name__ == '__main__':
     lfrm = LFRM()
