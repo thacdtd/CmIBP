@@ -47,7 +47,8 @@ class LFRM:
         self.dim_k = matrix_z.shape[1]
         assert(matrix_z.shape[0] == self.dim_n)
         self.matrix_z = matrix_z.astype(numpy.int)
-        self.matrix_w = numpy.random.normal(0, self.sigma_w, (self.dim_k, self.dim_k))
+        self.matrix_w = numpy.exp(self.log_likelihood_w(self.matrix_y, self.matrix_z))#numpy.random.normal(0, self.sigma_w, (self.dim_k, self.dim_k))
+        print self.matrix_w
         return self.matrix_z
 
     def log_likelihood_y(self, matrix_z=None, matrix_w=None):
@@ -259,16 +260,17 @@ class LFRM:
 
     def sample(self, iterations):
         for iter in xrange(iterations):
-            old_matrix_z = self.matrix_z
+            # old_matrix_z = self.matrix_z
             self.sample_matrix_z()
-            new_matrix_z = self.matrix_z
+            # new_matrix_z = self.matrix_z
             self.regularize_matrices()
-            self.sample_matrix_w(old_matrix_z, new_matrix_z)
+            #self.sample_matrix_w(old_matrix_z, new_matrix_z)
+            self.matrix_w = numpy.exp(self.log_likelihood_w(self.matrix_y, self.matrix_z))
             self.alpha = self.sample_alpha()
             # print iter, self.dim_k
-            print("alpha: %f\tsigma_w: %f\tmean_w: %f" % (self.alpha, self.sigma_w, self.mean_w))
+            # print("alpha: %f\tsigma_w: %f\tmean_w: %f" % (self.alpha, self.sigma_w, self.mean_w))
             print self.matrix_z.sum(axis=0)
-            # print self.matrix_w
+            #print self.matrix_w
 
     def load_data(self, file_location):
         import scipy.io
@@ -291,10 +293,10 @@ class LFRM:
 
         # data = numpy.array([[1, 0, 1], [0, 0, 1], [1, 1, 0]])
         self.initialize_data(datas[:, :, 0])
-        #self.initialize_data(data)
+        # self.initialize_data(data)
 
         matrix_z = self.initialize_matrix_z()
-        self.sample(100)
+        self.sample(1000)
         import matplotlib.pyplot as P
         from util.scaled_image import scaledimage
 
