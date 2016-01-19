@@ -50,9 +50,7 @@ class LFRM:
         self.matrix_w = numpy.random.normal(0, self.sigma_w, (self.dim_k, self.dim_k))
         return self.matrix_z
 
-    def log_likelihood_y(self, matrix_y=None, matrix_z=None, matrix_w=None):
-        # if matrix_y is None:
-            # matrix_y = self.matrix_y
+    def log_likelihood_y(self, matrix_z=None, matrix_w=None):
         if matrix_z is None:
             matrix_z = self.matrix_z
         if matrix_w is None:
@@ -78,8 +76,8 @@ class LFRM:
         new_m = (m - self.matrix_z[object_index, :]).astype(numpy.float)
 
         # compute the log probability of p(Znk=0 | Z_nk) and p(Znk=1 | Z_nk)
-        log_prob_z1 = numpy.log(new_m * (new_m / self.dim_n))
-        log_prob_z0 = numpy.log(new_m * (1.0 - new_m / self.dim_n))
+        log_prob_z1 = numpy.log(new_m / self.dim_n)
+        log_prob_z0 = numpy.log(1.0 - (new_m / self.dim_n))
 
         # find all singleton features possessed by current object
         singleton_features = [nk for nk in range(self.dim_k) if self.matrix_z[object_index, nk] != 0 and new_m[nk] == 0]
@@ -92,15 +90,13 @@ class LFRM:
 
                 # compute the log likelihood when Znk=0
                 self.matrix_z[object_index, feature_index] = 0
-                prob_z0 = self.log_likelihood_y(self.matrix_y[[object_index], :], self.matrix_z[[object_index], :],
-                                                self.matrix_w)
+                prob_z0 = self.log_likelihood_y(self.matrix_z[object_index, :], self.matrix_w)
                 prob_z0 += log_prob_z0[feature_index]
                 prob_z0 = numpy.exp(prob_z0)
 
                 # compute the log likelihood when Znk=1
                 self.matrix_z[object_index, feature_index] = 1
-                prob_z1 = self.log_likelihood_y(self.matrix_y[[object_index], :], self.matrix_z[[object_index], :],
-                                                self.matrix_w)
+                prob_z1 = self.log_likelihood_y(self.matrix_z[object_index, :], self.matrix_w)
                 prob_z1 += log_prob_z1[feature_index]
                 prob_z1 = numpy.exp(prob_z1)
 
@@ -183,32 +179,51 @@ class LFRM:
                 b = self.sample_metropolis_hastings_k_new(object_index, singleton_features)
                 # print b
 
-    def sample_matrix_w(self):
+    def sample_matrix_w(self, old_matrix_z, new_matrix_z):
         # construct the W_old
-        matrix_w_old = self.matrix_w
-        innov = numpy.random.uniform(-self.sigma_w + self.mean_w, self.sigma_w + self.mean_w, (self.dim_k, self.dim_k))
-        matrix_w_new = matrix_w_old + innov
-        prob_new = numpy.exp(self.log_likelihood_y(self.matrix_y, self.matrix_z, matrix_w_new))
+        #matrix_w_old = self.matrix_w
+        #innov = numpy.random.uniform(-self.sigma_w + self.mean_w, self.sigma_w + self.mean_w, (self.dim_k, self.dim_k))
+        #matrix_w_new = matrix_w_old + innov
+        log_prob_new = self.log_likelihood_w(self.matrix_y, new_matrix_z)
 
-        prob_old = numpy.exp(self.log_likelihood_y(self.matrix_y, self.matrix_z, matrix_w_old))
+        log_prob_old = numpy.log(self.matrix_w)
 
         # compute the probability of generating new features
-        prob_new /= (prob_old + prob_new)
+        #log_prob_new /= (log_prob_old + log_prob_new)
 
         #aprob = min([1., prob_new.all()/prob_old.all()])  # acceptance probability
         #u = numpy.random.uniform(0, 1)
         #if u < aprob:
 
-        # if we accept the proposal, we will replace old W matrices
-        if random.random() < prob_new.all():
-            # construct W_new
-            self.matrix_w = matrix_w_new
-            self.mean_w = numpy.mean(self.matrix_w)
-            self.sigma_w = numpy.std(self.matrix_w)
-            return True
+        mean_new = numpy.mean(numpy.exp(log_prob_new))
+        mean_old = numpy.mean(numpy.exp(log_prob_old))
 
+        mean_new /= (mean_new + mean_old)
+        aprob = min([1., mean_new/mean_old])
+        # if we accept the proposal, we will replace old W matrices
+        u = numpy.random.uniform(0, 1)
+        if u < aprob:#prob_new.all():
+            # construct W_new
+            # self.matrix_w = numpy.exp(log_prob_new) # matrix_w_new
+            # print log_prob_new
+            # self.mean_w = numpy.mean(numpy.exp(log_prob_new))
+            self.sigma_w = numpy.std(numpy.exp(log_prob_new))
+            self.matrix_w = numpy.random.normal(0, self.sigma_w, (self.dim_k, self.dim_k))
+            return True
         return False
 
+    def log_likelihood_w(self, matrix_y=None, matrix_z=None):
+        if matrix_y is None:
+            matrix_y = self.matrix_y
+        if matrix_z is None:
+            matrix_z = self.matrix_z
+
+        assert(matrix_y.shape == (self.dim_n, self.dim_n))
+
+        log_likelihood = numpy.dot(numpy.dot(matrix_z.T, matrix_y), matrix_z)
+
+        log_likelihood = numpy.log(1.0/(1.0+numpy.exp(-log_likelihood)))
+        return log_likelihood
     """
     remove the empty column in matrix Z and the corresponding feature in W
     """
@@ -244,11 +259,15 @@ class LFRM:
 
     def sample(self, iterations):
         for iter in xrange(iterations):
+            old_matrix_z = self.matrix_z
             self.sample_matrix_z()
+            new_matrix_z = self.matrix_z
             self.regularize_matrices()
-            self.sample_matrix_w()
+            self.sample_matrix_w(old_matrix_z, new_matrix_z)
+            self.alpha = self.sample_alpha()
             # print iter, self.dim_k
-            print("alpha: %f\tsigma_w: %f\tmean_w: %f" % (self.alpha, self.sigma_w, self.mean_w));
+            print("alpha: %f\tsigma_w: %f\tmean_w: %f" % (self.alpha, self.sigma_w, self.mean_w))
+            print self.matrix_z.sum(axis=0)
             # print self.matrix_w
 
     def load_data(self, file_location):
