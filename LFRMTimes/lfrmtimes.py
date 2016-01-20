@@ -10,6 +10,7 @@ class LFRMTimes:
         # dim_n: number of entities
         # dim_k: number of features
         self.alpha = 1.0
+        self.tau = 1.0
         self.sigma_w = 1.0
         self.mean_w = 0
         self.alpha_hyper_parameter = (1.0, 1.0)
@@ -27,11 +28,15 @@ class LFRMTimes:
         # print self.matrix_y.shape[0]
         self.dim_n = self.matrix_y.shape[0]
         self.dim_m = self.matrix_y.shape[2]
+        self.initialize_matrix_z()
 
     """
     initialize latent feature appearance matrix matrix_z according to IBP(alpha)
     """
     def initialize_matrix_z(self):
+        print "matrix_y"
+        init_matrix_y = self.matrix_y[:, :, 0]
+
         matrix_z = numpy.ones((0, 0))
         # initialize matrix matrix_z recursively in IBP manner
         for i in xrange(1, self.dim_n + 1):
@@ -39,7 +44,7 @@ class LFRMTimes:
                            (matrix_z.sum(axis=0).astype(numpy.float) / i))
 
             # sample a value from the poisson distribution, defines the number of new features
-            dim_k_new = scipy.stats.poisson.rvs((self.alpha * 1.0 / i))
+            dim_k_new = scipy.stats.poisson.rvs((self.alpha * 1.0 / (i + self.tau + self.alpha)))
 
             sample_dish = numpy.hstack((sample_dish, numpy.ones((1, dim_k_new))))
 
@@ -70,20 +75,27 @@ class LFRMTimes:
     """
     @param object_index: an int data type, indicates the object index n (row index) of Z we want to sample
     """
-    def sample_vector_z_m_n(self, object_index, previous_matrix_z_m):
-        if not previous_matrix_z_m:
+    def sample_vector_z_t_n(self, object_index, previous_matrix_z_t):
+        if not previous_matrix_z_t:
+            previous_matrix_z_t = numpy.zeros((self.dim_n, self.dim_k))
             print "no previous info"
         assert(type(object_index) == int or type(object_index) == numpy.int32 or type(object_index) == numpy.int64)
 
         # calculate initial feature possess counts
         m = self.matrix_z.sum(axis=0)
-
+        m_previous = previous_matrix_z_t.sum(axis=0)
+        # m = matrix_w_previos_info.sum(axis=0)
+        print "m"
+        print m
         # remove this data point from m vector
         new_m = (m - self.matrix_z[object_index, :]).astype(numpy.float)
+        new_m_previous = (m_previous - previous_matrix_z_t[object_index, :]).astype(numpy.float)
 
         # compute the log probability of p(Znk=0 | Z_nk) and p(Znk=1 | Z_nk)
-        log_prob_z1 = numpy.log(new_m * (new_m / self.dim_n))
-        log_prob_z0 = numpy.log(new_m * (1.0 - new_m / self.dim_n))
+        log_prob_z1 = numpy.log((new_m / (self.alpha + self.tau + self.dim_n)) +
+                                (self.tau*new_m_previous/(self.dim_n*(self.alpha + self.tau + self.dim_n))))
+        log_prob_z0 = numpy.log(1 - (new_m / (self.alpha + self.tau + self.dim_n)) +
+                                (self.tau*new_m_previous/(self.dim_n*(self.alpha + self.tau + self.dim_n))))
 
         # find all singleton features possessed by current object
         singleton_features = [nk for nk in range(self.dim_k) if self.matrix_z[object_index, nk] != 0 and new_m[nk] == 0]
@@ -115,11 +127,11 @@ class LFRMTimes:
                     self.matrix_z[object_index, feature_index] = 1
         return singleton_features
 
-    def sample_matrix_z_m(self, previous_matrix_z_m):
+    def sample_matrix_z_m(self, previous_matrix_z_t):
         order = numpy.random.permutation(self.dim_n)
         for (object_counter, object_index) in enumerate(order):
             # sample Z_n
-            singleton_features = self.sample_vector_z_m_n(object_index, previous_matrix_z_m)
+            singleton_features = self.sample_vector_z_t_n(object_index, previous_matrix_z_t)
 
             if self.metropolis_hastings_k_new:
                 # sample K_new using metropolis hasting
@@ -142,10 +154,16 @@ class LFRMTimes:
         print "lfrm_mibp"
         datas, data_num, t_time = self.load_data('../data/enrondata.mat')
         self.initialize_data(datas)
-        self.sample_matrix_z()
+        print "matrix z"
+        print self.matrix_z + self.matrix_z
+        #self.sample_matrix_z()
+
         print datas.shape
 
 if __name__ == '__main__':
     lfrmtimes = LFRMTimes()
     #lfrm_mibp.sample_a_m()
+
     lfrmtimes.run()
+
+    lfrmtimes.sample_vector_z_t_n(1, [])
