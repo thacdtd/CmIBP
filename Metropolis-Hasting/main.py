@@ -22,7 +22,6 @@ for i in xrange(1, n):
     if u < aprob:
         x = can
         vec.append(x)
-
 # plotting the results:
 # theoretical curve
 x = arange(-3, 3, .1)

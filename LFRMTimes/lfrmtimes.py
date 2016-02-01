@@ -139,7 +139,7 @@ class LFRMTimes:
                 # print b
 
     def sample_matrix_z(self):
-        for i in range(0, self.dim_m):#self.matrix_y.shape[3]:
+        for i in range(0, self.dim_m):
             print i
 
     def load_data(self, file_location):
