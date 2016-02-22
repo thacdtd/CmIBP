@@ -32,7 +32,7 @@ title('Metropolis-Hastings')
 plot(vec)
 subplot(212)
 
-#hist(vec, bins=30, normed=1)
+hist(vec, bins=30, normed=1)
 x = arange(-3, 3, .1)
 print x
 y = sdnorm(x)
