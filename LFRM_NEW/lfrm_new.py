@@ -12,7 +12,7 @@ class LFRM_NEW:
         # dim_n: number of entities
         # dim_k: number of features
         self.alpha = 1.0
-        self.beta_w = 1.0
+        self.beta_w = 1
         self.alpha_hyper_parameter = (1.0, 1.0)
         self.matrix_y = numpy.zeros((0, 0))
         self.matrix_w = numpy.zeros((0, 0))
@@ -42,6 +42,8 @@ class LFRM_NEW:
             matrix_z, matrix_w = self.loop_sample_z(i, matrix_z)
 
         self.dim_k = matrix_z.shape[1]
+        print "dim k"
+        print self.dim_k
         assert(matrix_z.shape[0] == self.dim_n)
         self.matrix_z = matrix_z.astype(numpy.int)
         self.matrix_w = matrix_w
@@ -221,8 +223,8 @@ class LFRM_NEW:
         return self.change_range(a)
 
     def change_range(self, x):
-        x = x*2 -1
-        return x
+        a = x*2 - 1
+        return a
 
     def sigmoid(self, x):
         a = 1.0/(1.0+numpy.exp(-x))
@@ -240,9 +242,9 @@ class LFRM_NEW:
                             [0,0,0,0,0,1,1,0,1],
                             [1,0,0,1,0,1,0,0,0]])
         """
-        data = numpy.array([[1,0,1],
+        data = numpy.array([[1,0,0],
                             [0,1,1],
-                            [1,1,1]])
+                            [0,1,0]])
 
         self.initialize_data(data)
 
